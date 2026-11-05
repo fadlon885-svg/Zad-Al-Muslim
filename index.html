@@ -62,7 +62,7 @@ button:disabled{opacity:.4}
 .qbc span{font-size:1.1em;font-weight:700;color:var(--qtx);padding-bottom:.1em}
 .qbs{font-size:1.1em}
 .v.mk-red{background:rgba(201,60,60,.17);border-radius:.25em}.v.mk-yellow{background:rgba(217,162,27,.2);border-radius:.25em}.v.mk-green{background:rgba(58,157,47,.17);border-radius:.25em}.v.mk-blue{background:rgba(30,136,214,.17);border-radius:.25em}
-.v.sel{background:var(--qsel);border-radius:.25em}.v.pl,.qbs.pl{background:var(--qpl);border-radius:.25em}.v.wl{background:rgba(217,162,27,.55);border-radius:.25em;box-shadow:0 0 0 .06em rgba(217,162,27,.55)}
+.v.sel{background:var(--qsel);border-radius:.25em}.v.pl,.qbs.pl{background:var(--qpl);border-radius:.25em}.v.wl{background:rgba(217,162,27,.55);border-radius:.25em;box-shadow:0 0 0 .06em rgba(217,162,27,.55)}.ml{position:relative;isolation:isolate}.v.pl,.qbs.pl{background:none!important;border-radius:0}.qband{position:absolute;top:0;bottom:0;background:var(--qband,rgba(141,108,73,.38));z-index:-1;pointer-events:none;border-radius:0}:root{--qband:rgba(141,108,73,.38)}@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--qband:rgba(63,191,147,.30)}}:root[data-theme="dark"]{--qband:rgba(63,191,147,.30)}
 .vn{flex:none;width:1.2em;height:1.5em;display:inline-flex;align-items:center;justify-content:center;background:var(--mk) center/contain no-repeat;margin-inline:.05em}
 .vn b{font:700 .4em "Noto Naskh Arabic",Tahoma,sans-serif;color:var(--qmk);line-height:1;padding-top:.06em}
 .vn.sel,.vn.pl{border-radius:50%}
@@ -1089,7 +1089,7 @@ function atog(){AU.paused?AU.play():AU.pause()}
 function qstop(){const w=AP.on;AP.on=0;try{AU.pause();AU.removeAttribute("src");AU.load()}catch(e){}qhl();qplui();if(w&&!HP.on)msClear()}
 
 /* ---- المتابعة كلمة بكلمة + التمرير التلقائي في الوضع الأفقي ---- */
-let WF={raf:0,w:-1,ak:"",key:"",wt:null,u:0};
+let WF={raf:0,w:-1,ak:"",key:"",wt:null,u:0,st:0,lk:""};
 function wWeights(s,a){const k=s+":"+a;if(WF.key==k&&WF.wt)return WF.wt;
  const ws=QD.text[s-1][a-1].split(/[ \u2009]/).filter(Boolean);
  WF.wt=ws.map(w=>w.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED\u0640]/g,"").length+1.5);WF.key=k;return WF.wt}
@@ -1098,16 +1098,22 @@ function wIndex(){
  const wt=wWeights(AP.s,AP.a),tot=wt.reduce((x,y)=>x+y,0);
  const f=Math.min(1,Math.max(0,(AU.currentTime/AU.duration-.02)/.94))*tot;
  let c=0;for(let i=0;i<wt.length;i++){c+=wt[i];if(f<c)return i}return wt.length-1}
-function wscroll(e){
+function wscroll(e,force){
  if(!qls()||S.qfollow===false||Date.now()-WF.u<4000)return;
- const pg=$("#qpg");if(!pg)return;
- const r=e.getBoundingClientRect(),p=pg.getBoundingClientRect(),m=p.height*.2;
- if(r.bottom>p.bottom-m||r.top<p.top+8)pg.scrollTo({top:Math.max(0,pg.scrollTop+(r.top-p.top)-p.height*.22),behavior:"smooth"})}
+ const pg=$("#qpg");if(!pg||!e)return;
+ const r=e.getBoundingClientRect(),p=pg.getBoundingClientRect(),h=p.height,y=r.top-p.top;
+ /* نُبقي السطر الجاري في الثلث العلوي؛ لا نتحرك إلا إذا خرج من المنطقة المريحة */
+ if(!force&&y>h*.12&&y<h*.45)return;
+ if(!force&&Date.now()-WF.st<350)return;
+ WF.st=Date.now();
+ pg.scrollTo({top:Math.max(0,pg.scrollTop+y-h*.28),behavior:force?"auto":"smooth"})}
 function wmark(fl){
  document.querySelectorAll("#qtx .v.wl").forEach(x=>x.classList.remove("wl"));
- if(!AP.on||AP.bs||S.qwf===false||WF.w<0)return;
- const b=`#qtx .v[data-s="${AP.s}"][data-a="${AP.a}"]`,e=document.querySelector(b+`[data-w="${WF.w}"]`);
- if(e){e.classList.add("wl");wscroll(e);return}
+ if(!AP.on||AP.bs)return;
+ const b=`#qtx .v[data-s="${AP.s}"][data-a="${AP.a}"]`,e=WF.w>=0?document.querySelector(b+`[data-w="${WF.w}"]`):null;
+ const vk=AP.s+":"+AP.a+":"+qn,nv=WF.lk!=vk;
+ if(e){if(S.qwf===true)e.classList.add("wl");wscroll(e,nv);WF.lk=vk;return}
+ if(WF.w<0){const f=document.querySelector(b+'[data-w="0"]')||document.querySelector(b);if(f){wscroll(f,nv);WF.lk=vk}return}
  /* الآية بدأت في هذه الصفحة وبقية كلماتها في الصفحة التالية: نقلّب الصفحة */
  if(fl&&S.qfollow!==false&&document.querySelector(b+'[data-w="0"]')&&qn<604)qp(qn+1,1)}
 function wtick(){
@@ -1119,12 +1125,26 @@ function wstart(){if(!WF.raf)WF.raf=requestAnimationFrame(wtick)}
 function wstop(){if(WF.raf){cancelAnimationFrame(WF.raf);WF.raf=0}}
 AU.addEventListener("playing",wstart);AU.addEventListener("pause",wstop);AU.addEventListener("ended",wstop);
 AU.addEventListener("seeked",()=>{WF.ak="";wstart()});
+matchMedia("(orientation:landscape)").addEventListener("change",()=>{WF.lk="";WF.u=0;setTimeout(()=>{try{qhl()}catch(e){}},500)});
 document.addEventListener("touchstart",e=>{if(e.target.closest&&e.target.closest("#qpg"))WF.u=Date.now()},{passive:true});
 document.addEventListener("wheel",e=>{if(e.target.closest&&e.target.closest("#qpg"))WF.u=Date.now()},{passive:true});
 function qhl(){
  document.querySelectorAll("#qtx .pl").forEach(x=>x.classList.remove("pl"));if(!AP.on)return;
  const q=AP.bs?`#qtx .qbs[data-s="${AP.s}"]`:`#qtx .v[data-s="${AP.s}"][data-a="${AP.a}"]`;
- document.querySelectorAll(q).forEach(x=>x.classList.add("pl"));wmark()}
+ document.querySelectorAll(q).forEach(x=>x.classList.add("pl"));qband();wmark()}
+function qband(){
+ document.querySelectorAll("#qtx .qband").forEach(x=>x.remove());
+ if(!AP.on||AP.bs)return;
+ const all=[...document.querySelectorAll(`#qtx .v[data-s="${AP.s}"][data-a="${AP.a}"]`)],ls=new Set(all.map(x=>x.closest(".ml")).filter(Boolean));
+ ls.forEach(ln=>{
+  const sp=all.filter(x=>x.closest(".ml")===ln);if(!sp.length)return;
+  const lr=ln.getBoundingClientRect(),ch=[...ln.children].filter(c=>!c.classList.contains("qband"));
+  const f=sp[0].getBoundingClientRect(),l=sp[sp.length-1].getBoundingClientRect(),rtl=getComputedStyle(ln).direction=="rtl";
+  const firstIn=ch[0]===sp[0],lastIn=ch[ch.length-1]===sp[sp.length-1]||ch[ch.length-1].classList.contains("sj")&&ch[ch.length-2]===sp[sp.length-1];
+  let a=firstIn?lr.right:f.right+2,b=lastIn?lr.left:l.left-2;
+  if(!rtl){a=firstIn?lr.left:f.left-2;b=lastIn?lr.right:l.right+2}
+  const x1=Math.min(a,b)-lr.left,x2=Math.max(a,b)-lr.left,d=document.createElement("div");
+  d.className="qband";d.style.left=x1+"px";d.style.width=(x2-x1)+"px";ln.insertBefore(d,ln.firstChild)})}
 function qplui(){
   const b=$("#qbot");if(!b)return;const on=AP.on,pl=on&&!AU.paused;
   b.innerHTML=`<button onclick="qexit()" aria-label="الرئيسية">${IC.home}</button><button class="qpb" onclick="qpt()" aria-label="تشغيل">${pl?"⏸":"▶"}</button><button class="qrn" onclick="qrpick()"><div><div>${recname()}</div>${on?`<small>${QD.names[AP.s-1]} · ${AD(AP.a)}</small>`:""}</div><span>▾</span></button>${on?`<button onclick="aprev()"><i>⏮</i></button><button onclick="anext()"><i>⏭</i></button><button onclick="qstop()"><i>⏹</i></button>`:""}`}
@@ -1142,7 +1162,7 @@ function qlisten(){
  <div class="set"><span>القارئ: <b>${recname()}</b></span><button class="gdl" onclick="qrdlall()">⬇ تنزيل</button></div>
  <button style="width:100%;margin-bottom:6px" onclick="qrOpen=!qrOpen;qlisten()">${qrOpen?"إغلاق القائمة":"تغيير القارئ"}</button>
  ${qrOpen?`<div style="margin-bottom:6px">${rows}<button style="margin-top:6px" onclick="qradd()">＋ إضافة قارئ</button></div>`:""}
- <div class="set"><span>المتابعة مع القراءة</span><input type="checkbox" ${S.qfollow!==false?"checked":""} onchange="S.qfollow=this.checked;save()" style="width:22px;height:22px"></div><div class="set"><span>تظليل كلمة بكلمة</span><input type="checkbox" ${S.qwf!==false?"checked":""} onchange="S.qwf=this.checked;save();wmark()" style="width:22px;height:22px"></div></div>`);
+ <div class="set"><span>المتابعة مع القراءة</span><input type="checkbox" ${S.qfollow!==false?"checked":""} onchange="S.qfollow=this.checked;save()" style="width:22px;height:22px"></div><div class="set"><span>تظليل كلمة بكلمة</span><input type="checkbox" ${S.qwf===true?"checked":""} onchange="S.qwf=this.checked;save();wmark()" style="width:22px;height:22px"></div></div>`);
  qdlist()}
 function qgoplay(s,a){qplay(s,a);qpop()}
 function qrsel(id){S.qrec=id;qrOpen=0;save();qlisten();qplui()}
