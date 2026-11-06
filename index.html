@@ -778,13 +778,14 @@ const RF=[16,20,26];
 function rd(){const L=HD[cc],x=L[ci],k="h"+cc+"-"+ci,d=S.tas[k]||0,rem=Math.max(0,x[1]-d),rf=S.rf||0;
  $("#m").innerHTML=`<div style="display:flex;flex-direction:column;height:100%;gap:8px"><div class="set" style="margin:0"><button onclick="bk()" aria-label="رجوع إلى الفهرس" style="font-size:1.1em;font-weight:bold;min-width:40px;min-height:36px;padding:2px 10px">→</button><button id="hpb" class="hpb" onclick="hpt()" aria-label="استماع">${hico()}</button><span style="display:flex;align-items:center;gap:6px"><span class="mu">حجم الخط</span><button onclick="fz(-1)" style="min-width:48px;font-size:1.2em">−</button><button onclick="fz(1)" style="min-width:48px;font-size:1.2em">+</button></span></div>
  <div id="rc" style="flex:1;overflow:auto;line-height:2.1;font-size:${RF[rf]}px;padding:4px 2px"><div class="mu" style="margin-bottom:6px">${CH[cc]} · ${AD(ci+1)}/${AD(L.length)}</div><p style="margin:0 0 12px">${x[0]}</p><div class="mu" style="font-size:.8em">${x[2]}</div></div>
- <button class="tas" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn">${rem?AD(rem):"✓"}</span></button></div>`;
+ <button class="tas" id="tb" onclick="hc()" style="width:112px;height:112px;margin:0 auto 8px;font-size:2.2em;flex:none"><span id="tn"></span></button></div>`;tnU(d,x[1]);
  let sx=0;const e=$("#rc");e.ontouchstart=t=>sx=t.touches[0].clientX;e.ontouchend=t=>{const dx=t.changedTouches[0].clientX-sx;if(Math.abs(dx)>60)mv(dx>0?-1:1)}}
+function tnU(d,n){const tn=$("#tn"),tb=$("#tb");if(!tn)return;const done=d>=n;tn.innerHTML=done?`<b style="font-size:1em">✓</b><small style="display:block;font-size:.3em;opacity:.9;line-height:1">تم · التالي</small>`:`<b style="font-size:1em;line-height:1">${AD(d)}</b><small style="display:block;font-size:.34em;opacity:.9;line-height:1.3">من ${AD(n)}</small>`;if(tb){const pc=Math.min(100,Math.round(100*d/n));tb.style.backgroundImage=`linear-gradient(to top,rgba(255,255,255,.28) ${pc}%,transparent ${pc}%)`}}
 function th(v){S.theme=v;apply();save();set()}
 function fz(d){S.rf=Math.max(0,Math.min(2,(S.rf||0)+d));save();rd()}
 function hc(){const k="h"+cc+"-"+ci,x=HD[cc][ci],d=S.tas[k]||0;
  if(d>=x[1]){mv(-1);return}
- S.tas[k]=d+1;save();const rem=x[1]-d-1;$("#tn").textContent=rem?AD(rem):"✓";
+ S.tas[k]=d+1;save();const rem=x[1]-d-1;tnU(d+1,x[1]);
  if(!rem){if(S.vib&&navigator.vibrate)navigator.vibrate(30);
   if(S.auto!==false&&ci<HD[cc].length-1){const c=cc,i=ci;setTimeout(()=>{if(cc==c&&ci==i&&$("#rc"))mv(-1)},500)}}}
 let locBusy=0,locT=0;
@@ -1602,10 +1603,11 @@ function tfshare(id){
 /* ---- ملء الشاشة أثناء المصحف ---- */
 /* التطبيق المثبّت أو المفتوح من APK (حتى لو ظهر داخل كروم المصغّر لأن التحقق من الموقع لم يتم) */
 try{if(/^android-app:\/\//.test(document.referrer))sessionStorage.setItem("zapp","1")}catch(e){}
-function fsApp(){try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true||sessionStorage.getItem("zapp")=="1"}catch(e){return false}}
+function fsNative(){try{return !!(window.Capacitor&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform())}catch(e){return false}}
+function fsApp(){try{return fsNative()||matchMedia("(display-mode: standalone)").matches||navigator.standalone===true||sessionStorage.getItem("zapp")=="1"}catch(e){return false}}
 function fsFull(){try{return matchMedia("(display-mode: fullscreen)").matches}catch(e){return false}}
 function fsWant(){return fsApp()?S.qfa!==false:S.qfs===true}
-function fsReq(){if(fsFull())return;const e=document.documentElement,f=e.requestFullscreen||e.webkitRequestFullscreen;if(!f||document.fullscreenElement||document.webkitFullscreenElement)return;try{const r=f.call(e,{navigationUI:"hide"});r&&r.catch&&r.catch(()=>{})}catch(x){}}
+function fsReq(){try{const SB=fsNative()&&Capacitor.Plugins&&Capacitor.Plugins.StatusBar;if(SB){SB.hide();return}}catch(e){}if(fsFull())return;const e=document.documentElement,f=e.requestFullscreen||e.webkitRequestFullscreen;if(!f||document.fullscreenElement||document.webkitFullscreenElement)return;try{const r=f.call(e,{navigationUI:"hide"});r&&r.catch&&r.catch(()=>{})}catch(x){}}
 function fsSet(v){if(fsApp())S.qfa=v;else S.qfs=v;save();v?fsReq():qfsOff()}
 /* داخل تطبيق APK: ملء الشاشة تلقائيًا عند أول لمسة (ويمكن إيقافه من الضبط) */
 document.addEventListener("click",()=>{if(fsApp()&&fsWant())fsReq()},true);
