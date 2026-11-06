@@ -454,6 +454,7 @@ function set(){
  $("#m").innerHTML=`<div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">${LOGO(34)}<h1 style="margin:0">الإعدادات</h1></div>
  <div class="set"><span>المظهر</span><span style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button onclick="th('${t[0]}')" style="${S.theme==t[0]?"background:var(--ac);color:#fff":""}">${t[1]}</button>`).join("")}</span></div>
  <div class="mu" style="margin:-4px 0 8px">«تلقائي» يتبع مظهر الهاتف (فاتح/مظلم)</div>
+ <div class="set"><span>الأذونات</span><button class="gdl" onclick="pmGate(1)">فتح</button></div>
  <div class="set"><span>حجم الخط</span><span><button onclick="fs(-2)">−</button> <button onclick="fs(2)">+</button> <button onclick="S.fs=18;apply();save()">افتراضي</button></span></div>
  <div class="set"><span>الاهتزاز في المسبحة</span><input type="checkbox" ${S.vib?"checked":""} onchange="S.vib=this.checked;save()" style="width:24px;height:24px"></div>
  <div class="set"><span>الانتقال للذكر التالي تلقائيًا بعد إكمال العدد</span><input type="checkbox" ${S.auto!==false?"checked":""} onchange="S.auto=this.checked;save()" style="width:24px;height:24px"></div>
@@ -1357,7 +1358,61 @@ function qsrun(){
 function qsgo(s,a){const p=qPageOf(s,a);qafter=()=>{qp(p);QS={s,a};qmenu(2);qsel()};qpop()}
 function qset(){
   const sw=(t,k,f)=>`<div class="set"><span>${t}</span><input type="checkbox" ${S[k]!==false?"checked":""} onchange="S.${k}=this.checked;save();${f}" style="width:24px;height:24px"></div>`;
-  qshow("qo-st","الضبط",`<div class="card"><div class="set"><span>المظهر</span></div><div style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button style="flex:1;${(S.theme||"auto")==t[0]?"background:var(--ac);color:#fff":""}" onclick="qth('${t[0]}')">${t[1]}</button>`).join("")}</div><div class="mu" style="margin-top:6px;font-size:.8em">«تلقائي» يتبع وضع الجهاز</div></div><div class="card"><div class="set"><span>ملء الشاشة (في المتصفح)</span><input type="checkbox" ${S.qfs===true?"checked":""} onchange="S.qfs=this.checked;save();this.checked?qfsOn():qfsOff()" style="width:24px;height:24px"></div>${sw("إبقاء الشاشة مضاءة","wake","this.checked?wakeOn():wakeOff()")}${sw("متابعة الصفحة مع التلاوة","qfollow","")}</div><div class="card" style="display:flex;flex-direction:column;gap:8px"><button onclick="qlisten()">🎧 الاستماع والقرّاء والتنزيل</button><button onclick="qlib()">📚 المكتبة (التفاسير)</button><button onclick="qshare()">📤 مشاركة</button><button onclick="qexit()">الخروج من المصحف</button></div>`)}
+  qshow("qo-st","الضبط",`<div class="card"><div class="set"><span>المظهر</span></div><div style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button style="flex:1;${(S.theme||"auto")==t[0]?"background:var(--ac);color:#fff":""}" onclick="qth('${t[0]}')">${t[1]}</button>`).join("")}</div><div class="mu" style="margin-top:6px;font-size:.8em">«تلقائي» يتبع وضع الجهاز</div></div><div class="card"><div class="set"><span>ملء الشاشة (في المتصفح)</span><input type="checkbox" ${S.qfs===true?"checked":""} onchange="S.qfs=this.checked;save();this.checked?qfsOn():qfsOff()" style="width:24px;height:24px"></div>${sw("إبقاء الشاشة مضاءة","wake","this.checked?wakeOn():wakeOff()")}${sw("متابعة الصفحة مع التلاوة","qfollow","")}</div><div class="card" style="display:flex;flex-direction:column;gap:8px"><button onclick="qlisten()">🎧 الاستماع والقرّاء والتنزيل</button><button onclick="qlib()">📚 المكتبة (التفاسير)</button><button onclick="pmGate(1)">🔐 الأذونات</button><button onclick="qdiag()">🔔 اختبار إشعار الصوت</button><button onclick="qshare()">📤 مشاركة</button><button onclick="qexit()">الخروج من المصحف</button></div>`)}
+
+/* ---- طلب الأذونات مبكرًا عند فتح التطبيق ---- */
+let PMS=0;
+async function pmState(){const r={};
+ r.n=typeof Notification=="undefined"?"na":(Notification.permission=="default"?"prompt":Notification.permission);
+ try{r.g=(await navigator.permissions.query({name:"geolocation"})).state}catch(e){r.g=navigator.geolocation?"prompt":"na"}
+ try{r.s=navigator.storage&&navigator.storage.persisted?((await navigator.storage.persisted())?"granted":"prompt"):"na"}catch(e){r.s="na"}
+ r.m=(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)?(S.pmm?"granted":"prompt"):"na";return r}
+const PMI={n:["🔔","الإشعارات","تذكير الأذكار والصلاة والآيات"],g:["📍","الموقع","مواقيت الصلاة واتجاه القبلة"],s:["💾","التخزين الدائم","حفظ التنزيلات والتفاسير والأصوات دون إنترنت"],m:["🧭","الحركة والاتجاه","تشغيل البوصلة"]};
+async function pmGate(force){
+ if(document.getElementById("pmg"))return;
+ const st=await pmState(),need=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
+ if(!need.length&&!force)return;if(PMS&&!force)return;
+ const d=document.createElement("div");d.id="pmg";
+ d.style.cssText="position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;direction:rtl";
+ d.innerHTML='<div class="card" style="max-width:420px;width:100%;margin:0;max-height:92%;overflow:auto"><h1 style="margin-top:0">أذونات التطبيق</h1><div class="mu" style="margin-bottom:8px">يحتاج «زاد المسلم» هذه الأذونات ليعمل كاملًا من أول مرة.</div><div id="pmr"></div><button class="gdl" id="pmall" style="width:100%;margin-top:10px" onclick="pmAll()">السماح بكل الأذونات</button><button id="pmlt" style="width:100%;margin-top:8px" onclick="pmClose(1)">لاحقًا</button><div class="mu" id="pmmsg" style="margin-top:8px;font-size:.85em"></div></div>';
+ document.body.appendChild(d);pmDraw(st)}
+function pmClose(skip){if(skip)PMS=1;const d=document.getElementById("pmg");if(d)d.remove()}
+function pmDraw(st){const e=document.getElementById("pmr");if(!e)return;
+ const lb={granted:"✅ ممنوح",prompt:"⏳ لم يُطلب بعد",denied:"⛔ مرفوض",na:"— غير متاح هنا"};
+ e.innerHTML=Object.keys(PMI).filter(k=>st[k]!="na").map(k=>`<div class="set" style="align-items:flex-start"><span><b>${PMI[k][0]} ${PMI[k][1]}</b><br><span class="mu" style="font-size:.8em">${PMI[k][2]}</span><br><span style="font-size:.85em">${lb[st[k]]||""}</span></span>${st[k]=="granted"?"":`<button class="gdl" onclick="pmOne('${k}')">السماح</button>`}</div>`).join("");
+ const left=Object.keys(PMI).filter(k=>st[k]=="prompt"||st[k]=="denied");
+ const b=document.getElementById("pmall");if(b)b.style.display=left.length?"":"none";
+ const m=document.getElementById("pmmsg");
+ if(m)m.textContent=st.n=="denied"||st.g=="denied"?"إذن مرفوض: اضغط على رمز القفل بجانب عنوان الموقع (أو إعدادات التطبيق في الهاتف ← الأذونات) وفعّله، ثم ارجع واضغط «السماح» مرة أخرى.":"";
+ const lt=document.getElementById("pmlt");if(lt)lt.textContent=left.length?"لاحقًا":"تم"}
+async function pmOne(k){
+ try{
+  if(k=="n"&&typeof Notification!="undefined")await Notification.requestPermission();
+  else if(k=="g")await new Promise(res=>{try{navigator.geolocation.getCurrentPosition(p=>{if(!S.chosen){S.lat=p.coords.latitude;S.lng=p.coords.longitude;S.tz=Intl.DateTimeFormat().resolvedOptions().timeZone;S.city="موقعي الحالي";S.chosen=1;save()}res()},()=>res(),{timeout:20000,maximumAge:60000})}catch(e){res()}});
+  else if(k=="s"&&navigator.storage&&navigator.storage.persist)await navigator.storage.persist();
+  else if(k=="m"&&window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission){if(await DeviceOrientationEvent.requestPermission()=="granted"){S.pmm=1;save()}}
+ }catch(e){}
+ const st=await pmState();pmDraw(st);
+ if(!Object.keys(PMI).some(x=>st[x]=="prompt"||st[x]=="denied")){setTimeout(()=>pmClose(),700);try{qtoast("تم منح الأذونات ✓")}catch(e){}}}
+async function pmAll(){const st=await pmState();for(const k of Object.keys(PMI))if(st[k]=="prompt"||st[k]=="denied")await pmOne(k)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&document.getElementById("pmg"))pmState().then(pmDraw)});
+
+function qdiag(){
+ const ua=navigator.userAgent,wv=/; wv\)|WebView/i.test(ua)||(/Version\/4\.0/.test(ua)&&/Chrome/.test(ua)),
+  inst=(()=>{try{return matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches||navigator.standalone}catch(e){return false}})(),
+  ms="mediaSession" in navigator,cl=/claude\.ai|claudeusercontent/.test(location.hostname),
+  row=(ok,t,n)=>`<div class="set"><span>${ok?"✅":"❌"} ${t}</span></div>${n?`<div class="mu" style="margin:-4px 0 8px;font-size:.8em">${n}</div>`:""}`;
+ qshow("qo-dg","اختبار إشعار الصوت",`<div class="card">
+ ${row(ms,"المتصفح يدعم إشعار الوسائط",ms?"":"هذه البيئة لا تعرض إشعار الوسائط إطلاقًا.")}
+ ${row(!wv,"ليس داخل WebView",wv?"التطبيق مغلَّف بـ WebView وهو لا يعرض إشعار الوسائط مهما كان الكود. ابنِه كـ TWA عبر PWABuilder أو ثبّته من كروم («تثبيت التطبيق»).":"")}
+ ${row(!cl,"ليس داخل معاينة Claude",cl?"المعاينة داخل تطبيق Claude لا تعرض الإشعار. جرّب من كروم أو من التطبيق المثبّت.":"")}
+ ${row(inst,"يعمل كتطبيق مثبّت",inst?"":"افتحه من كروم ثم «تثبيت التطبيق» وشغّله من أيقونته.")}
+ <div class="mu" style="font-size:.8em;margin:8px 0">اضغط الزر ثم اسحب ستارة الإشعارات: يجب أن ترى «اختبار الإشعار» مع أزرار التشغيل.</div>
+ <button class="gdl" style="width:100%" onclick="qdiagGo()">▶ تشغيل اختبار (15 ثانية)</button></div>`)}
+function qdiagGo(){try{if(AP.on)qstop();if(HP.on)hstop()}catch(e){}
+ msSet("اختبار الإشعار","زاد المسلم",{play:()=>KA.play(),pause:()=>KA.pause(),stop:()=>KA.pause()});
+ KA.play().then(()=>{try{navigator.mediaSession.playbackState="playing"}catch(e){}qtoast("اسحب ستارة الإشعارات الآن")}).catch(()=>qtoast("تعذّر التشغيل"));
+ setTimeout(()=>{if(!AP.on&&!HP.on){KA.pause();msClear()}},15000)}
 function qth(v){S.theme=v;apply();save();qset()}
 function qexit(){qst=[];qshut();try{history.replaceState(null,"")}catch(e){}go("menu")}
 /* ---- قائمة الآية (ضغط مطوّل): فواصل، تلاوة، مكتبة، ملاحظات ---- */
@@ -2072,7 +2127,7 @@ function slCompat(){
  else{st="⚠ هذا الجهاز لا يدعم تغيير وضع الصامت من التطبيق؛ ستصلك تذكيرات فقط.";alt="فعّل الوضع الصامت يدويًا عند الصلاة.";}
  return `<div class="card"><div class="lh">التوافق مع جهازك</div><div class="mu">${st}</div><div class="mu" style="margin-top:6px">${alt}</div>${and&&vt[v]?`<div class="mu" style="margin-top:6px">لضمان وصول التذكيرات في الخلفية — ${vt[v]}</div>`:""}<div class="mu" style="margin-top:6px">حالة الاختبار: هذه الخاصية لم تُختبر بعد على أجهزة Android حقيقية (Samsung وHuawei وXiaomi وRedmi وHonor وغيرها) ولا على إصدارات Android المختلفة، فلا تُعدّ مكتملة. التذكير اليدوي هو المضمون على كل الأجهزة.</div></div>`}
 
-apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();
+apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(()=>{try{pmGate()}catch(e){}},900);
 
 /* ---- الوسائط: إشعار التحكم (مثل مشغّل الـ MP3) ---- */
 function msSet(title,artist,h){try{if(!("mediaSession" in navigator))return;let aw=[];try{const b=new URL("icon-512.png",location.href).href;aw=[{src:b,sizes:"512x512",type:"image/png"}]}catch(e){}navigator.mediaSession.metadata=new MediaMetadata({title,artist,album:"زاد المسلم",artwork:aw});[["play",h.play],["pause",h.pause],["previoustrack",h.prev],["nexttrack",h.next],["stop",h.stop]].forEach(([a,f])=>{try{navigator.mediaSession.setActionHandler(a,f||null)}catch(e){}})}catch(e){}}
