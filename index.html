@@ -466,7 +466,7 @@ function set(){
  <div class="set"><span>العصر</span><select onchange="S.asr=+this.value;save()"><option value="1" ${S.asr==1?"selected":""}>جمهور (الظل = المثل)</option><option value="2" ${S.asr==2?"selected":""}>حنفي (المثلان)</option></select></div>
  <div class="set"><span>تعديل المواقيت (دقائق)</span><select onchange="S.adj=+this.value;save()">${[-5,-4,-3,-2,-1,0,1,2,3,4,5].map(n=>`<option ${n==S.adj?"selected":""}>${n}</option>`).join("")}</select></div>
  <div class="set"><span>إبقاء الشاشة مضاءة أثناء قراءة المصحف</span><input type="checkbox" ${S.wake!==false?"checked":""} onchange="S.wake=this.checked;save();if(!this.checked)wakeOff()" style="width:24px;height:24px"></div>
- <div class="set"><span>ملء الشاشة أثناء قراءة المصحف</span><input type="checkbox" ${S.qfs!==false?"checked":""} onchange="S.qfs=this.checked;save();this.checked?qfsOn():qfsOff()" style="width:24px;height:24px"></div>
+ <div class="set"><span>ملء الشاشة أثناء قراءة المصحف</span><input type="checkbox" ${S.qfs===true?"checked":""} onchange="S.qfs=this.checked;save();this.checked?qfsOn():qfsOff()" style="width:24px;height:24px"></div>
  <div class="set"><span>التنبيهات والعبادات</span><button class="gdl" onclick="nt()">فتح</button></div>
  <div class="set"><span>الوضع الصامت أثناء الصلاة</span><button class="gdl" onclick="sl()">فتح</button></div>
  <div class="mu" id="ls"></div>
@@ -956,7 +956,7 @@ function qlay(){
   if(ok)lo=n==1?(()=>{let i=0,m=1e9;FL[1].forEach((c,li)=>{const s=runs[0].u.slice(i,i+c).reduce((q,u)=>q+u.w,0)/100+(c-1)*.16;i+=c;m=Math.min(m,FW1[li]*(W+16)/s)});return LS?m*.99:Math.min(m*.99,lp/1.3,44)})():qfixf(runs[0].u,FL[n],W*.84,LS?400:Math.min(lp/1.45,40));
  const f=lo*QL.k,g=f*.16;if(LS)lp=f*1.85;let h="",used=0,ri=0;
  B.forEach(b=>{
-  if(b.t=="b"){if(ok)h+='<div class="ml"></div>'.repeat(3);used++;h+=`<div class="ml qb"><div class="qbn"><i class="o"><svg class="rz"><use href="#qro"/></svg></i><div class="qbc"><span>${ok&&BNN[b.s]?BNN[b.s]:"سورة "+QD.names[b.s-1]}</span></div><i class="o"><svg class="rz"><use href="#qro"/></svg></i></div></div>${ok?'<div class="ml"></div>':""}`}
+  if(b.t=="b"){if(ok&&!LS)h+='<div class="ml"></div>'.repeat(3);used++;h+=`<div class="ml qb"><div class="qbn"><i class="o"><svg class="rz"><use href="#qro"/></svg></i><div class="qbc"><span>${ok&&BNN[b.s]?BNN[b.s]:"سورة "+QD.names[b.s-1]}</span></div><i class="o"><svg class="rz"><use href="#qro"/></svg></i></div></div>${ok&&!LS?'<div class="ml"></div>':""}`}
   else if(b.t=="m"){used++;h+=`<div class="ml c qbs" data-s="${b.s}"><span>${QD.text[0][0].split(" ").map(qconv).join(" ")}</span></div>`}
   else{
    const rj=ri++;let L=ok?qfl(n):LL?LL[rj]:qwrap(b.u,f,W,g);
@@ -965,7 +965,7 @@ function qlay(){
     let c=sh&&!(n==1&&ok);
     if(!sh&&b.end&&li==L.length-1){const nat=ix.reduce((t,i)=>t+b.u[i].w*f/100,0)+(ix.length-1)*g;if(nat/W<.62)c=true}
     used++;const sty=n==1&&ok?` style="width:${(FW1[li]*(W+16)).toFixed(1)}px;margin:0 auto;padding:0"`:"";h+=`<div class="ml${c?" c":""}"${sty}>${ix.map(i=>`<span class="u">${b.u[i].h}</span>`).join("")}</div>`})}});
- tx.style.cssText=`font-size:${f.toFixed(2)}px;--lp:${lp.toFixed(2)}px;height:${((ok||!sh?N:used)*lp).toFixed(2)}px`;
+ tx.style.cssText=`font-size:${f.toFixed(2)}px;--lp:${lp.toFixed(2)}px;height:${((ok&&LS?used:(ok||!sh?N:used))*lp).toFixed(2)}px`;
  tx.className=ok?"fx":"";tx.innerHTML=h;if(!LS)pg.scrollTop=0;else if(QL.sn!==n){pg.scrollTop=0;QL.sn=n}
  if(QL.k>.7&&[...tx.querySelectorAll(".ml")].some(e=>e.scrollWidth>e.clientWidth+1)){QL.k*=.97;return qlay()}
  qkash(tx);qsel();qhl()}
@@ -1357,7 +1357,7 @@ function qsrun(){
 function qsgo(s,a){const p=qPageOf(s,a);qafter=()=>{qp(p);QS={s,a};qmenu(2);qsel()};qpop()}
 function qset(){
   const sw=(t,k,f)=>`<div class="set"><span>${t}</span><input type="checkbox" ${S[k]!==false?"checked":""} onchange="S.${k}=this.checked;save();${f}" style="width:24px;height:24px"></div>`;
-  qshow("qo-st","الضبط",`<div class="card"><div class="set"><span>المظهر</span></div><div style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button style="flex:1;${(S.theme||"auto")==t[0]?"background:var(--ac);color:#fff":""}" onclick="qth('${t[0]}')">${t[1]}</button>`).join("")}</div><div class="mu" style="margin-top:6px;font-size:.8em">«تلقائي» يتبع وضع الجهاز</div></div><div class="card">${sw("ملء الشاشة","qfs","this.checked?qfsOn():qfsOff()")}${sw("إبقاء الشاشة مضاءة","wake","this.checked?wakeOn():wakeOff()")}${sw("متابعة الصفحة مع التلاوة","qfollow","")}</div><div class="card" style="display:flex;flex-direction:column;gap:8px"><button onclick="qlisten()">🎧 الاستماع والقرّاء والتنزيل</button><button onclick="qlib()">📚 المكتبة (التفاسير)</button><button onclick="qshare()">📤 مشاركة</button><button onclick="qexit()">الخروج من المصحف</button></div>`)}
+  qshow("qo-st","الضبط",`<div class="card"><div class="set"><span>المظهر</span></div><div style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button style="flex:1;${(S.theme||"auto")==t[0]?"background:var(--ac);color:#fff":""}" onclick="qth('${t[0]}')">${t[1]}</button>`).join("")}</div><div class="mu" style="margin-top:6px;font-size:.8em">«تلقائي» يتبع وضع الجهاز</div></div><div class="card"><div class="set"><span>ملء الشاشة (في المتصفح)</span><input type="checkbox" ${S.qfs===true?"checked":""} onchange="S.qfs=this.checked;save();this.checked?qfsOn():qfsOff()" style="width:24px;height:24px"></div>${sw("إبقاء الشاشة مضاءة","wake","this.checked?wakeOn():wakeOff()")}${sw("متابعة الصفحة مع التلاوة","qfollow","")}</div><div class="card" style="display:flex;flex-direction:column;gap:8px"><button onclick="qlisten()">🎧 الاستماع والقرّاء والتنزيل</button><button onclick="qlib()">📚 المكتبة (التفاسير)</button><button onclick="qshare()">📤 مشاركة</button><button onclick="qexit()">الخروج من المصحف</button></div>`)}
 function qth(v){S.theme=v;apply();save();qset()}
 function qexit(){qst=[];qshut();try{history.replaceState(null,"")}catch(e){}go("menu")}
 /* ---- قائمة الآية (ضغط مطوّل): فواصل، تلاوة، مكتبة، ملاحظات ---- */
@@ -1505,7 +1505,10 @@ function tfshare(id){
  const tx=`${QD.text[TV.s-1][TV.a-1]}\n[سورة ${QD.names[TV.s-1]} · آية ${AD(TV.a)}]\n\n${x.n}:\n${pl}`;
  if(navigator.share){navigator.share({text:tx}).catch(()=>{})}else{try{navigator.clipboard.writeText(tx);qtoast("نُسخ النص")}catch(e){qtoast("تعذّرت المشاركة")}}}
 /* ---- ملء الشاشة أثناء المصحف ---- */
-function qfsOn(){if(S.qfs===false||!$("#qv"))return;const e=document.documentElement,f=e.requestFullscreen||e.webkitRequestFullscreen;if(!f||document.fullscreenElement||document.webkitFullscreenElement)return;try{const r=f.call(e,{navigationUI:"hide"});r&&r.catch&&r.catch(()=>{})}catch(x){}}
+function qfsOn(){if(S.qfsv!==2){S.qfsv=2;S.qfs=false;try{save()}catch(e){}}
+ if(S.qfs!==true||!$("#qv"))return;try{if(matchMedia("(display-mode: fullscreen)").matches||matchMedia("(display-mode: standalone)").matches||navigator.standalone)return}catch(e){}
+ /* في المتصفح فقط: واجهة ملء الشاشة تُظهر رسالة نظام لا يمكن إخفاؤها، لذلك صارت اختيارية */
+ const e=document.documentElement,f=e.requestFullscreen||e.webkitRequestFullscreen;if(!f||document.fullscreenElement||document.webkitFullscreenElement)return;try{const r=f.call(e,{navigationUI:"hide"});r&&r.catch&&r.catch(()=>{})}catch(x){}}
 /* ضبط ارتفاع المصحف على الشاشة المرئية فعلًا (يُصلح اختفاء شريط الصوت السفلي في ملء الشاشة/شريط المتصفح) */
 function qvfit(){const q=document.getElementById("qv");if(!q)return;const v=window.visualViewport,h=Math.round(v?v.height:innerHeight),t=Math.round(v?v.offsetTop:0);if(h>200){q.style.height=h+"px";q.style.top=t+"px";q.style.bottom="auto"}}
 function qvfit2(){qvfit();[150,400,900,1800].forEach(t=>setTimeout(qvfit,t))}
