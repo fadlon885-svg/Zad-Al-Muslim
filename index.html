@@ -2137,9 +2137,9 @@ const ADM=[["mala","علي بن أحمد ملا — الحرم المكي",119],
 const ADN=[[0,"الفجر"],[2,"الظهر"],[3,"العصر"],[4,"المغرب"],[5,"العشاء"]];
 const adS=()=>{if(!S.ad)S.ad={on:0,m:"mala",pr:[1,1,1,1,1],vol:1,fn:""};if(!S.ad.m||(S.ad.m=="custom"&&!S.ad.fn))S.ad.m="mala";return S.ad};
 const ADA=new Audio();ADA.preload="none";let adUrl="",adPlaying=0;
-function adBtn(on){let b=$("#adstop");if(!b){b=document.createElement("button");b.id="adstop";b.textContent="⏹ إيقاف الأذان";b.onclick=adStop;document.body.appendChild(b)}b.classList.toggle("on",!!on)}
+function adBtn(on){let b=$("#adstop");if(!b){b=document.createElement("button");b.id="adstop";b.textContent="⏹ إيقاف الأذان";b.onclick=adStop;document.body.appendChild(b)}b.classList.toggle("on",!!on);try{if(window.AdhanNative)AdhanNative.setPlaying(!!on)}catch(e){}}
 function adStop(){try{ADA.pause();ADA.removeAttribute("src");ADA.load()}catch(e){}adPlaying=0;adBtn(0);if(adUrl){try{URL.revokeObjectURL(adUrl)}catch(e){}adUrl=""}}
-ADA.onended=()=>{adPlaying=0;adBtn(0)};
+ADA.onended=()=>{adPlaying=0;adBtn(0)};window.adStopNative=function(){if(adPlaying)adStop();return 1};
 ADA.onerror=()=>{if(!adPlaying)return;adPlaying=0;adBtn(0);qtoast("تعذّر تشغيل صوت الأذان. تأكد من الاتصال بالإنترنت أو اختر «ملف من جهازك» من إعدادات الأذان.",8000)};
 async function adSrc(){const c=adS();if(c.m=="custom"){try{const b=await idbGet("adhan:custom");if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}return ""}const m=ADM.find(x=>x[0]==c.m)||ADM[0];try{const b=await idbGet("adhan:c:"+m[0]);if(b){adUrl=URL.createObjectURL(b);return adUrl}}catch(e){}if(typeof ADEMB!="undefined"&&ADEMB[m[0]]){adUrl=URL.createObjectURL(adBlob(m[0]));return adUrl}return "https://www.assabile.com/download/adhan/"+m[2]}
 async function adPlay(label){const c=adS();adStop();const u=await adSrc();if(!u){qtoast("لم تختر ملف أذان من جهازك بعد؛ افتح إعدادات الأذان واختر ملفًا أو اختر مؤذنًا من القائمة.",7000);return false}
