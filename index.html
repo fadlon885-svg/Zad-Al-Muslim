@@ -860,7 +860,19 @@ const recname=()=>(RC.find(r=>r[0]==(S.qrec||RLD[0]))||[0,"القارئ"])[1];
 const inp="width:100%;font:inherit;font-size:.85em;padding:10px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx)";
 /* ---- الصفحة ---- */
 const QDEFS=(()=>{let p="";for(let i=0;i<12;i++)p+=`<ellipse cx="50" cy="27" rx="8.5" ry="19" transform="rotate(${i*30} 50 50)"/>`;return `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="qro" viewBox="0 0 100 100"><circle cx="50" cy="50" r="47" fill="var(--qcart)" stroke="var(--qg)" stroke-width="2.4"/><g fill="var(--qfill)" stroke="var(--qg)" stroke-width="1.8">${p}</g><circle cx="50" cy="50" r="12" fill="var(--qg2)" stroke="var(--qg)" stroke-width="2"/><circle cx="50" cy="50" r="4.5" fill="var(--qg)"/></symbol></defs></svg>`})();
-function quran(){qopen(AP.on?qPageOf(AP.s,AP.a):1)}
+/* ---- حفظ موضع القراءة (سورة + آية) ---- */
+function qlsave(s,a,pg){try{S.ql={s:s|0,a:a|0,p:pg||qPageOf(s,a),u:Date.now()};save()}catch(e){}}
+function qlinfo(){const r=S.ql;if(r&&r.s>=1&&r.s<=114&&QD&&QD.names&&QD.names[r.s-1]&&r.a>=1&&r.p>=1&&r.p<=604)return r;return null}
+function qlhere(){const r=qlinfo();return r?"سورة "+QD.names[r.s-1]+" · آية "+AD(r.a):""}
+function quran(){
+ const r=qlinfo(),pg=AP.on?qPageOf(AP.s,AP.a):(r?r.p:Math.max(1,Math.min(604,S.qp|0||1)));
+ qopen(pg);
+ if(!AP.on&&r&&r.p==pg&&(S.qp|0)>0){setTimeout(()=>{try{
+  if(qn!=pg||!$("#qv"))return;
+  const els=[...document.querySelectorAll(`#qtx .v[data-s="${r.s}"][data-a="${r.a}"]`)];
+  els.forEach(x=>x.classList.add("sel"));
+  qtoast("تابعتَ من "+qlhere());
+  setTimeout(()=>{if(!QS)els.forEach(x=>x.classList.remove("sel"))},4500)}catch(e){}},750)}}
 function qopen(n){
  if(!$("#qv")){
   const d=document.createElement("div");d.id="qv";
@@ -880,6 +892,7 @@ function qopen(n){
 function qpv(n){const Y=QLN[n];if(Y&&Y.f&&Y.l){const r=[];for(let s=Y.f[0],a=Y.f[1];qc([s,a],Y.l)<=0&&s<=114;){r.push([s,a]);if(++a>QD.text[s-1].length){s++;a=1}}return r}const st=QD.pages[n-1],en=n<604?QD.pages[n]:[115,1],r=[];for(let s=st[0],a=st[1];qc([s,a],en)<0;){r.push([s,a]);if(++a>QD.text[s-1].length){s++;a=1}}return r}
 function qp(n,keep){
  n=Math.max(1,Math.min(604,n|0||1));qn=n;S.qp=n;save();try{khSee(n)}catch(e){}
+ try{if(AP&&AP.on&&AP.s&&qPageOf(AP.s,AP.a)==n)qlsave(AP.s,AP.a,n);else if(!S.ql||S.ql.p!=n){const st=QD.pages[n-1];qlsave(st[0],st[1],n)}}catch(e){}
  QL={n,b:qbuild(n),k:1};
  const ss=qSur(n);
  $("#qhr").textContent="الجزء "+JZ[qJuz(n)-1];$("#qhl").textContent=QD.names[ss[ss.length-1]-1];qfoot();$("#qf").className=n%2?"o":"e";
@@ -1082,7 +1095,7 @@ function qidx(){
  const bm=(S.qb||[]).slice().sort((a,b)=>a-b);
  const rows=qtab?QD.juz.map((j,i)=>{const p=qPageOf(j[0],j[1]);return `<div class="row" onclick="qidxgo(${p})" style="cursor:pointer"><b>الجزء ${AD(i+1)}</b><span class="mu">${QD.names[j[0]-1]} ${AD(j[1])} · ص ${AD(p)}</span></div>`}).join("")
  :QD.names.map((n,i)=>`<div class="row" onclick="qidxgo(${QSP[i]})" style="cursor:pointer"><span><b>${AD(i+1)}. ${n}</b> <span class="mu">${QD.type[i]?"مكية":"مدنية"} · ${AD(QD.text[i].length)} آية</span></span><span class="mu">ص ${AD(QSP[i])}</span></div>`).join("");
- qshow("qo-i","الفهرس",`<div class="card">${S.qp&&S.qp!=qn?`<button class="p" onclick="qidxgo(${S.qp})" style="width:100%;margin-bottom:10px">متابعة القراءة — صفحة ${AD(S.qp)}</button>`:""}<div class="set" style="margin:0"><span>اذهب إلى صفحة</span><span style="display:flex;gap:6px"><input id="qg" type="number" inputmode="numeric" min="1" max="604" placeholder="${AD(1)}–${AD(604)}" onkeydown="if(event.key=='Enter')qgo()"><button onclick="qgo()">اذهب</button></span></div></div>
+ qshow("qo-i","الفهرس",`<div class="card">${(qlinfo()&&qlinfo().p!=qn)?`<button class="p" onclick="qidxgo(${qlinfo().p})" style="width:100%;margin-bottom:10px">متابعة القراءة — ${qlhere()} (ص ${AD(qlinfo().p)})</button>`:(S.qp&&S.qp!=qn?`<button class="p" onclick="qidxgo(${S.qp})" style="width:100%;margin-bottom:10px">متابعة القراءة — صفحة ${AD(S.qp)}</button>`:"")}<div class="set" style="margin:0"><span>اذهب إلى صفحة</span><span style="display:flex;gap:6px"><input id="qg" type="number" inputmode="numeric" min="1" max="604" placeholder="${AD(1)}–${AD(604)}" onkeydown="if(event.key=='Enter')qgo()"><button onclick="qgo()">اذهب</button></span></div></div>
  ${bm.length?`<div class="card"><b>العلامات</b>${bm.map(p=>`<div class="row" onclick="qidxgo(${p})" style="cursor:pointer"><span>🔖 صفحة ${AD(p)}</span><span class="mu">${qSur(p).map(s=>QD.names[s-1]).join(" · ")}</span></div>`).join("")}</div>`:""}
  ${qmyrows()}
   <div class="card"><div class="set" style="margin:0 0 8px"><button class="${qtab?"":"p"}" onclick="qtab=0;qidx()">السور</button><button class="${qtab?"p":""}" onclick="qtab=1;qidx()">الأجزاء</button></div>${rows}</div>`);qidxFoot()}
@@ -1394,7 +1407,7 @@ function qsrun(){
   const sr=sur.map(s=>`<div class="row" style="cursor:pointer" onclick="qidxgo(${QSP[s-1]})"><b>سورة ${QD.names[s-1]}</b><span class="mu">ص ${AD(QSP[s-1])}</span></div>`).join("");
   const ar=res.map(([s,a])=>`<div class="card" style="cursor:pointer;margin-bottom:8px;padding:12px" onclick="qsgo(${s},${a})"><div class="mu">سورة ${QD.names[s-1]} · آية ${AD(a)} · ص ${AD(qPageOf(s,a))}</div><div class="qt" style="line-height:2;margin-top:4px">${QD.text[s-1][a-1]}</div></div>`).join("");
   o.innerHTML=(sr?`<div class="card">${sr}</div>`:"")+(tot?`<div class="mu" style="margin-bottom:8px">${AD(tot)} آية${tot>80?" — يُعرض أول ٨٠، أضف كلمة لتضييق البحث":""}</div>${ar}`:(sr?"":`<div class="mu">لا نتائج</div>`))}
-function qsgo(s,a){const p=qPageOf(s,a);qafter=()=>{qp(p);QS={s,a};qmenu(2);qsel()};qpop()}
+function qsgo(s,a){const p=qPageOf(s,a);qafter=()=>{qp(p);QS={s,a};qlsave(s,a,p);qmenu(2);qsel()};qpop()}
 function qset(){
   const sw=(t,k,f)=>`<div class="set"><span>${t}</span><input type="checkbox" ${S[k]!==false?"checked":""} onchange="S.${k}=this.checked;save();${f}" style="width:24px;height:24px"></div>`;
   qshow("qo-st","الضبط",`<div class="card"><div class="set"><span>المظهر</span></div><div style="display:flex;gap:6px">${[["auto","تلقائي"],["light","فاتح"],["dark","مظلم"]].map(t=>`<button style="flex:1;${(S.theme||"auto")==t[0]?"background:var(--ac);color:#fff":""}" onclick="qth('${t[0]}')">${t[1]}</button>`).join("")}</div><div class="mu" style="margin-top:6px;font-size:.8em">«تلقائي» يتبع وضع الجهاز</div></div><div class="card"><div class="set"><span>ملء الشاشة (إخفاء شريط الحالة والأزرار)</span><input type="checkbox" ${fsWant()?"checked":""} onchange="fsSet(this.checked)" style="width:24px;height:24px"></div>${sw("إبقاء الشاشة مضاءة","wake","this.checked?wakeOn():wakeOff()")}${sw("متابعة الصفحة مع التلاوة","qfollow","")}</div><div class="card" style="display:flex;flex-direction:column;gap:8px"><button onclick="qlisten()">🎧 الاستماع والقرّاء والتنزيل</button><button onclick="qlib()">📚 المكتبة (التفاسير)</button><button onclick="pmGate(1)">🔐 الأذونات</button><button onclick="qdiag()">🔔 اختبار إشعار الصوت</button><button onclick="qshare()">📤 مشاركة</button><button onclick="qexit()">الخروج من المصحف</button></div>`)}
@@ -1478,7 +1491,7 @@ function qmark(){
 function qasOpen(s,a){
  if($("#qas")||!$("#qv"))return;
  try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}
- QS={s,a};qmenu(0);qsel();
+ QS={s,a};qlsave(s,a);qmenu(0);qsel();
  qas={s,a,v:"m",x:0,t:0};
  const o=document.createElement("div");o.id="qas";o.className="qas";o.innerHTML=`<div class="qap" id="qap"></div>`;
  o.style.pointerEvents="none";setTimeout(()=>{o.style.pointerEvents=""},450);
@@ -2179,7 +2192,7 @@ function slCompat(){
 apply();go("menu");ready=1;snReset();ntTick();slTick();adTick();setTimeout(()=>{try{pmGate()}catch(e){}},900);
 
 /* ---- حفظ مكان التلاوة ومتابعتها ---- */
-function saveRes(){try{if(!AP||!AP.s||!QD||!QD.names)return;if(!AP.on&&!AP.res)return;const f=S.qrec||RLD[0],sur=!!SUD[f];S.qres={s:AP.s,a:AP.a,f,t:sur&&AU.currentTime>1?Math.floor(AU.currentTime):0,u:Date.now()};save()}catch(e){}}
+function saveRes(){try{if(!AP||!AP.s||!QD||!QD.names)return;if(!AP.on&&!AP.res)return;const f=S.qrec||RLD[0],sur=!!SUD[f];S.qres={s:AP.s,a:AP.a,f,t:sur&&AU.currentTime>1?Math.floor(AU.currentTime):0,u:Date.now()};if(AP.on)S.ql={s:AP.s,a:AP.a,p:qPageOf(AP.s,AP.a),u:Date.now()};save()}catch(e){}}
 setInterval(()=>{if(AP&&AP.on){AP.res=1;saveRes()}},4000);
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&AP&&AP.on)saveRes()});
 addEventListener("pagehide",()=>{if(AP&&AP.on)saveRes()});
